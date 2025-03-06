@@ -1,0 +1,5 @@
+Host: "localhost"
+Port: 5432
+User: "candy_user"
+Password: "qw"
+Dbname: "candy_shop"
