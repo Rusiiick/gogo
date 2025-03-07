@@ -8,6 +8,7 @@ type SupplyDTO struct {
 	Description string  `json:"description"`
 	Price       float32 `json:"price"`
 	Quantity    int     `json:"quantity"`
+	Category    int     `json:"category"`
 }
 
 func ToDTO(t *models.Supply) *SupplyDTO {
@@ -21,6 +22,7 @@ func ToDTO(t *models.Supply) *SupplyDTO {
 		Description: t.Description,
 		Price:       t.Price,
 		Quantity:    t.Quantity,
+		Category:    t.Category,
 	}
 
 	return supplies

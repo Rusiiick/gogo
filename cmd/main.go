@@ -36,5 +36,17 @@ func main() {
 
 	router.DELETE("/supplies/:id", handler.DeleteSup)
 
+	router.POST("/category", handler.CreateCtgry)
+
+	router.GET("/categoties", handler.GetAllCtgry)
+
+	router.GET("category/:id", handler.GetCtgryByID)
+
+	router.GET("/supplies/category/:id", handler.GetSupplyByCtgry)
+
+	router.PATCH("/category/:id", handler.UpdateCtgry)
+
+	router.DELETE("/gategory/:id", handler.DeleteCtgry)
+
 	router.Run("localhost:8080")
 }
