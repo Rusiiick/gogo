@@ -5,6 +5,6 @@ type Supply struct {
 	Title       string  `json:"title"`
 	Description string  `json:"description"`
 	Price       float32 `json:"price"`
-	Quantity    int     `json:"qantity"`
-	Category    int     `json:"category"`
+	Quantity    int     `json:"quantity"`
+	CategoryID  int     `json:"category_id"`
 }

@@ -11,13 +11,17 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func (db *DB) CreateSuppliy(ctx context.Context, supplies models.Supply) error {
-	_, err := db.Conn.Exec(ctx, "INSERT INTO public.supplies (title, description, price, quantity) VALUES ($1, $2, $3, $4)", supplies.Title, supplies.Description, supplies.Price, supplies.Quantity)
+func (db *DB) CreateSuppliy(ctx context.Context, supplies models.Supply) (int, error) {
+	var newID int
+	err := db.Conn.QueryRow(ctx, "INSERT INTO public.supplies (title, description, price, quantity, category_id) VALUES ($1, $2, $3, $4, $5) RETURNING id",
+		supplies.Title, supplies.Description, supplies.Price, supplies.Quantity, supplies.CategoryID).Scan(&newID)
 	if err != nil {
-		log.Println("Ошибка при добавлении товара", err)
-		return err
+		log.Println("Ошибка при добавлении товара:", err)
+		return 0, err
 	}
-	return nil
+
+	log.Println("Товар успешно добавлен с ID:", newID)
+	return newID, nil
 }
 
 func (db *DB) GetSupplyByID(ctx context.Context, id int) (*models.Supply, error) {
@@ -37,7 +41,6 @@ func (db *DB) GetSupplyByID(ctx context.Context, id int) (*models.Supply, error)
 }
 
 func (db *DB) UpdateSupply(ctx context.Context, supply models.Supply, id int) error {
-
 	cmdTag, err := db.Conn.Exec(ctx, "UPDATE public.supplies SET title = $1, description = $2, price = $3, quantity = $4 WHERE id = $5", supply.Title, supply.Description, supply.Price, supply.Quantity, id)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Ошибка при обновлении данных: %v\n", err)

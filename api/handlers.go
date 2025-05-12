@@ -1,7 +1,6 @@
 package api
 
 import (
-	"candy_shop/category"
 	"net/http"
 	"strconv"
 
@@ -11,19 +10,18 @@ import (
 func (h *Handler) CreateSup(c *gin.Context) {
 	var supply SupplyDTO
 
-	err := c.BindJSON(&supply)
+	if err := c.ShouldBindBodyWithJSON(&supply); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	id, err := h.db.CreateSuppliy(c.Request.Context(), *DTOtoModels(&supply))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	err = h.db.CreateSuppliy(c.Request.Context(), DTOtoModels(supply))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.Status(http.StatusCreated)
+	c.JSON(http.StatusCreated, gin.H{"id": id})
 }
 
 func (h *Handler) GetSupply(c *gin.Context) {
@@ -61,7 +59,7 @@ func (h *Handler) UpdateSup(c *gin.Context) {
 		return
 	}
 
-	err = h.db.UpdateSupply(c.Request.Context(), DTOtoModels(supply), id)
+	err = h.db.UpdateSupply(c.Request.Context(), *DTOtoModels(&supply), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка при получении товара"})
 		return
@@ -98,20 +96,20 @@ func (h *Handler) DeleteSup(c *gin.Context) {
 }
 
 func (h *Handler) CreateCtgry(c *gin.Context) {
-	var category *CategoryDTO
+	var category CategoryDTO
 
-	err := c.BindJSON(category)
+	err := c.BindJSON(&category)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	err = h.db.CreateCategory(c.Request.Context(), DTOtoModelsctgry(category))
+	id, err := h.db.CreateCategory(c.Request.Context(), DTOtoModelsctgry(&category))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	}
 
-	c.Status(http.StatusCreated)
+	c.JSON(http.StatusCreated, gin.H{"id": id})
 }
 
 func (h *Handler) GetCtgryByID(c *gin.Context) {
@@ -125,26 +123,34 @@ func (h *Handler) GetCtgryByID(c *gin.Context) {
 	category, err := h.db.GetCategoryById(c.Request.Context(), id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 	if category == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Пустая строка"})
+		return
 	}
 
 	c.JSON(http.StatusOK, ToDTOctgry(category))
 }
 
 func (h *Handler) GetAllCtgry(c *gin.Context) {
-	category, err := h.db.GetAllCategory(c.Request.Context())
+	categories, err := h.db.GetAllCategory(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	if category == nil {
-		c.JSON(http.StatusNotFound, gin.H{"message": "Категория не найдена"})
+
+	if len(categories) == 0 {
+		c.JSON(http.StatusNotFound, gin.H{"message": "Категории не найдены"})
 		return
 	}
 
-	c.JSON(http.StatusOK, category)
+	categoriesDTO := make([]CategoryDTO, 0, len(categories))
+	for _, category := range categories {
+		categoriesDTO = append(categoriesDTO, *ToDTOctgry(category))
+	}
+
+	c.JSON(http.StatusOK, categoriesDTO)
 }
 
 func (h *Handler) GetSupplyByCtgry(c *gin.Context) {
@@ -195,6 +201,7 @@ func (h *Handler) UpdateCtgry(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка при получении товара"})
 		return
 	}
+
 	if ctgr == nil {
 		c.JSON(http.StatusNotFound, gin.H{"message": "Товар не найден"})
 		return
@@ -211,9 +218,9 @@ func (h *Handler) DeleteCtgry(c *gin.Context) {
 		return
 	}
 
-	err = h.db.DeleteCategory(c.Request.Context(), category.Category{}, id)
+	err = h.db.DeleteCategory(c.Request.Context(), id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка при получении категории"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка при удалении категории"})
 		return
 	}
 

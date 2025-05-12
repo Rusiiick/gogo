@@ -1,5 +1,12 @@
-Host: "localhost"
-Port: 5432
-User: "candy_user"
-Password: "qw"
-Dbname: "candy_shop"
+DBConfig:
+  Host: "localhost"
+  Port: 5432
+  User: "candy_user"
+  Password: "qw"
+  Dbname: "candy_shop"
+
+JWTSecret: "zhest_kak_secretno"
+
+AccessTokenDuration: "15m"
+
+RefreshTokenDuration: "168h"

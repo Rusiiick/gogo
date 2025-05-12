@@ -1,9 +1,12 @@
 package main
 
 import (
+	"candy_shop/api"
 	"candy_shop/config"
-	"candy_shop/internal/api"
+	"candy_shop/internal/auth"
 	"candy_shop/internal/database"
+	"candy_shop/internal/middleware"
+
 	"context"
 	"fmt"
 	"os"
@@ -13,40 +16,49 @@ import (
 
 func main() {
 	ctx := context.Background()
-	config := config.DefaultConfig()
+	config, err := config.LoadConfig()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to parse config: %v\n", err)
+		os.Exit(1)
+	}
 
-	fmt.Printf("Config: %+v\n", config)
-
-	db, err := database.NewDB(ctx, config)
+	db, err := database.NewDB(ctx, config.DBconfig)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to connect to database: %v\n", err)
 		os.Exit(1)
 	}
 	defer db.Close(ctx)
 
-	handler := api.NewHandler(db)
+	ts := auth.NewTokenService(config.JWTSecret, config.AccessTokenDuration)
+
+	handler := api.NewHandler(db, ts, config)
 
 	router := gin.Default()
 
-	router.POST("/supplies", handler.CreateSup)
+	router.Use(middleware.LoggerMiddleware())
 
-	router.GET("/supplies/:id", handler.GetSupply)
+	router.POST("/user", handler.RegisterHandler)
+	router.POST("/user/login", handler.LoginHandler)
 
-	router.PATCH("/supplies/:id", handler.UpdateSup)
+	auth := router.Group("/", middleware.AuthMiddleware(ts))
+	{
+		auth.GET("/supplies/:id", handler.GetSupply)
+		auth.GET("/categories", handler.GetAllCtgry)
+		auth.GET("/category/:id", handler.GetCtgryByID)
+		auth.GET("/supplies/category/:id", handler.GetSupplyByCtgry)
+		auth.POST("/user/refresh", handler.RefreshHandler)
+	}
 
-	router.DELETE("/supplies/:id", handler.DeleteSup)
+	admin := router.Group("/", middleware.AuthMiddleware(ts), middleware.AuthorizeRole(1))
+	{
+		admin.POST("/supplies", handler.CreateSup)
+		admin.PATCH("/supplies/:id", handler.UpdateSup)
+		admin.DELETE("/supplies/:id", handler.DeleteSup)
 
-	router.POST("/category", handler.CreateCtgry)
-
-	router.GET("/categoties", handler.GetAllCtgry)
-
-	router.GET("category/:id", handler.GetCtgryByID)
-
-	router.GET("/supplies/category/:id", handler.GetSupplyByCtgry)
-
-	router.PATCH("/category/:id", handler.UpdateCtgry)
-
-	router.DELETE("/gategory/:id", handler.DeleteCtgry)
+		admin.POST("/category", handler.CreateCtgry)
+		admin.PATCH("/category/:id", handler.UpdateCtgry)
+		admin.DELETE("/category/:id", handler.DeleteCtgry)
+	}
 
 	router.Run("localhost:8080")
 }
